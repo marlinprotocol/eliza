@@ -1,0 +1,80 @@
+import os from 'os';
+import fs from 'fs';
+import https from 'https';
+import path from 'path';
+import { execSync } from 'child_process';
+
+const BASE_URL: string = 'https://artifacts.marlin.org/oyster/binaries/';
+const FILE_NAME: string = 'oyster-cvm';
+
+// Define clearer types for platform/arch maps
+const PLATFORM_MAP: { [key: string]: string } = {
+  linux: 'linux',
+  darwin: 'darwin',
+};
+
+const ARCH_MAP: { [key: string]: string } = {
+  x64: 'amd64',
+  arm64: 'arm64',
+};
+
+function getDownloadUrl(): string {
+  const platform: NodeJS.Platform = os.platform();
+  const arch: string = os.arch();
+
+  const mappedPlatform: string | undefined = PLATFORM_MAP[platform];
+  const mappedArch: string | undefined = ARCH_MAP[arch];
+
+  if (!mappedPlatform || !mappedArch) {
+    console.error(`Error: Unsupported platform/architecture: ${platform}/${arch}`);
+    process.exit(1);
+  }
+
+  if (mappedPlatform === 'darwin' && mappedArch !== 'arm64') {
+    console.error(
+      `Error: Unsupported architecture for Darwin: ${arch}. Only arm64 (M-series Macs) is supported.`
+    );
+    process.exit(1);
+  }
+
+  const binaryName: string = `${FILE_NAME}_latest_${mappedPlatform}_${mappedArch}`;
+  return `${BASE_URL}${binaryName}`;
+}
+
+export function downloadAndInstall(): void {
+  const url: string = getDownloadUrl();
+  const tempDir: string = os.tmpdir();
+  const tempFile: string = path.join(tempDir, 'oyster-cvm');
+  const destination: string = '/usr/local/bin/oyster-cvm';
+
+  // Download the file to a temporary location
+  const file = fs.createWriteStream(tempFile);
+  https
+    .get(url, (response) => {
+      if (response.statusCode !== 200) {
+        console.error(`Failed to download file. HTTP Status: ${response.statusCode}`);
+        process.exit(1);
+      }
+
+      response.pipe(file);
+
+      file.on('finish', () => {
+        file.close(() => {
+          try {
+            // Move the file to the destination with sudo
+            execSync(`sudo mv ${tempFile} ${destination}`);
+            // Set executable permissions
+            execSync(`sudo chmod +x ${destination}`);
+            console.log(`Installed oyster-cvm-cli!`);
+          } catch (error) {
+            console.error(`Failed to move or set permissions: ${error.message}`);
+            process.exit(1);
+          }
+        });
+      });
+    })
+    .on('error', (error) => {
+      console.error(`Error during download: ${error.message}`);
+      process.exit(1);
+    });
+}
