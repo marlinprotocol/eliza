@@ -133,6 +133,8 @@ export class AgentRuntime implements IAgentRuntime {
   private knowledgeProcessingSemaphore = new Semaphore(10);
   private settings: RuntimeSettings;
 
+  private servicesInitQueue = new Set<typeof Service>();
+
   constructor(opts: {
     conversationLength?: number;
     agentId?: UUID;
@@ -277,9 +279,10 @@ export class AgentRuntime implements IAgentRuntime {
       }
     }
 
-    // Register plugin services
     if (plugin.services) {
-      await Promise.all(plugin.services.map((service) => this.registerService(service)));
+      plugin.services.forEach((service) => {
+        this.servicesInitQueue.add(service);
+      });
     }
   }
 
@@ -422,6 +425,11 @@ export class AgentRuntime implements IAgentRuntime {
         (item): item is string => typeof item === 'string'
       );
       await this.processCharacterKnowledge(stringKnowledge);
+    }
+
+    // Start all deferred services now that runtime is ready
+    for (const service of this.servicesInitQueue) {
+      await this.registerService(service);
     }
   }
 
@@ -854,6 +862,7 @@ export class AgentRuntime implements IAgentRuntime {
     channelId,
     serverId,
     worldId,
+    userId,
   }: {
     entityId: UUID;
     roomId: UUID;
@@ -864,6 +873,7 @@ export class AgentRuntime implements IAgentRuntime {
     channelId?: string;
     serverId?: string;
     worldId?: UUID;
+    userId?: UUID;
   }) {
     if (entityId === this.agentId) {
       throw new Error('Agent should not connect to itself');
@@ -876,6 +886,7 @@ export class AgentRuntime implements IAgentRuntime {
     const names = [name, userName].filter(Boolean);
     const metadata = {
       [source]: {
+        id: userId,
         name: name,
         userName: userName,
       },
