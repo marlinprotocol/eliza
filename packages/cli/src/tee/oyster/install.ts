@@ -43,12 +43,16 @@ function getDownloadUrl(): string {
 
 export function downloadAndInstall(): void {
   const url: string = getDownloadUrl();
-  const tempDir: string = os.tmpdir();
-  const tempFile: string = path.join(tempDir, 'oyster-cvm');
-  const destination: string = '/usr/local/bin/oyster-cvm';
+  const oysterDir: string = path.join(os.homedir(), '.oyster');
+  const destination: string = path.join(oysterDir, 'oyster-cvm');
 
-  // Download the file to a temporary location
-  const file = fs.createWriteStream(tempFile);
+  // Create .oyster directory if it doesn't exist
+  if (!fs.existsSync(oysterDir)) {
+    fs.mkdirSync(oysterDir, { mode: 0o755 });
+  }
+
+  // Download to destination
+  const file = fs.createWriteStream(destination);
   https
     .get(url, (response) => {
       if (response.statusCode !== 200) {
@@ -61,13 +65,11 @@ export function downloadAndInstall(): void {
       file.on('finish', () => {
         file.close(() => {
           try {
-            // Move the file to the destination with sudo
-            execSync(`sudo mv ${tempFile} ${destination}`);
             // Set executable permissions
-            execSync(`sudo chmod +x ${destination}`);
+            fs.chmodSync(destination, 0o755);
             console.log(`Installed oyster-cvm-cli!`);
           } catch (error) {
-            console.error(`Failed to move or set permissions: ${error.message}`);
+            console.error(`Failed to set permissions: ${error.message}`);
             process.exit(1);
           }
         });

@@ -3,7 +3,6 @@ import { fetchCvmList, fetchOysterCvmLogs, installOysterCvmCli } from '@/src/tee
 
 /**
  * Install oyster-cvm-cli
- *
  * @returns {Promise<void>} - A promise that resolves when the initialization is complete.
  */
 const initCommand = new Command()
@@ -12,7 +11,7 @@ const initCommand = new Command()
   .action(async () => {
     try {
       console.log('Installing oyster-cvm-cli...');
-      await installOysterCvmCli();
+      installOysterCvmCli();
     } catch (error) {
       console.error('Failed to install oyster-cvm-cli:', error);
       process.exit(1);

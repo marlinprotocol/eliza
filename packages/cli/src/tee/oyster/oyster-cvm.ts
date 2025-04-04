@@ -1,14 +1,17 @@
 import { spawn } from 'child_process';
+import path from 'path';
+import os from 'os';
 
 /**
  * Executes the `oyster-cvm list --address <address>` command and prints the response.
  * @param address The address to pass to the command.
  */
 function executeOysterCvmListCommand(address: string): void {
-  const command = 'oyster-cvm';
+  const oysterDir: string = path.join(os.homedir(), '.oyster');
+  const oysterCvmExecutable: string = path.join(oysterDir, 'oyster-cvm');
   const args = ['list', '--address', address];
 
-  const process = spawn(command, args);
+  const process = spawn(oysterCvmExecutable, args);
 
   process.stdout.on('data', (data) => {
     console.log(data.toString().trim());
@@ -28,10 +31,11 @@ function executeOysterCvmListCommand(address: string): void {
  * @param ip The IP address to pass to the command.
  */
 function executeOysterCvmLogsCommand(ip: string): void {
-  const command = 'oyster-cvm';
+  const oysterDir: string = path.join(os.homedir(), '.oyster');
+  const oysterCvmExecutable: string = path.join(oysterDir, 'oyster-cvm');
   const args = ['logs', '--ip', ip];
 
-  const process = spawn(command, args);
+  const process = spawn(oysterCvmExecutable, args);
 
   process.stdout.on('data', (data) => {
     console.log(data.toString().trim());
