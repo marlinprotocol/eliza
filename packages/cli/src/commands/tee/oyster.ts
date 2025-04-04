@@ -1,5 +1,7 @@
 import { Command } from 'commander';
 import { fetchCvmList, fetchOysterCvmLogs, installOysterCvmCli } from '@/src/tee/oyster';
+import { DockerOperations } from '../../tee/phala/docker';
+import os from 'os';
 
 /**
  * Install oyster-cvm-cli
@@ -59,6 +61,38 @@ const fetchCvmLogsCommand = new Command()
   });
 
 /**
+ * Command to build a Docker image with specified options.
+ *
+ * @typedef {Object} Options
+ * @property {string} image - Docker image name
+ * @property {string} dockerfile - Path to Dockerfile
+ * @property {string} tag - Tag for the Docker image
+ * @property {string} username - Docker Hub username
+ *
+ * @param {Options} options - The options for building the Docker image
+ * @returns {Promise<void>} - A promise that resolves once the image is built or rejects with an error
+ */
+const buildCommand = new Command()
+  .command('build')
+  .description('Build the docker image')
+  .requiredOption('-i, --image <name>', 'Docker image name')
+  .requiredOption('-u, --username <name>', 'Docker Hub username')
+  .requiredOption('-f, --dockerfile <path>', 'Path to Dockerfile')
+  .requiredOption('-t, --tag <tag>', 'Tag for the Docker image')
+  .action(async (options) => {
+    const { image, dockerfile, tag, username } = options;
+    const dockerOps = new DockerOperations(image, username);
+
+    try {
+      console.log(`Detected system architecture: ${os.arch()}`);
+      await dockerOps.buildImage(dockerfile, tag);
+    } catch (error) {
+      console.error('Docker image build failed:', error);
+      process.exit(1);
+    }
+  });
+
+/**
  * A command for managing Oyster TEE deployments.
  *
  * @type {Command}
@@ -67,4 +101,5 @@ export const oysterCommand = new Command('oyster')
   .description('Manage Oyster TEE deployments')
   .addCommand(initCommand)
   .addCommand(listCvmCommand)
-  .addCommand(fetchCvmLogsCommand);
+  .addCommand(fetchCvmLogsCommand)
+  .addCommand(buildCommand);
