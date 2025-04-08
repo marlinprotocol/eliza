@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { createUniqueUuid } from './entities';
-import { decryptSecret, getSalt, handlePluginImporting } from './index';
+import { decryptSecret, getSalt } from './index';
 import logger from './logger';
 import { splitChunks } from './prompts';
 // Import enums and values that are used as values
@@ -307,18 +307,6 @@ export class AgentRuntime implements IAgentRuntime {
     // Load and register plugins from character configuration
     const pluginRegistrationPromises = [];
 
-    if (this.character.plugins) {
-      const characterPlugins = (await handlePluginImporting(this.character.plugins)) as Plugin[];
-
-      // Register each character plugin
-      for (const plugin of characterPlugins) {
-        if (plugin && !registeredPluginNames.has(plugin.name)) {
-          registeredPluginNames.add(plugin.name);
-          pluginRegistrationPromises.push(await this.registerPlugin(plugin));
-        }
-      }
-    }
-
     // Register plugins that were provided in the constructor
     for (const plugin of [...this.plugins]) {
       if (plugin && !registeredPluginNames.has(plugin.name)) {
@@ -471,34 +459,20 @@ export class AgentRuntime implements IAgentRuntime {
       match_threshold: 0.1,
     });
 
-    const uniqueSources = [
-      ...new Set(
-        fragments
-          .map((memory) => {
-            this.runtimeLogger.debug(
-              `Matched fragment: ${memory.content.text} with similarity: ${memory.similarity}`
-            );
-            return memory?.metadata?.type === MemoryType.FRAGMENT
-              ? memory?.metadata?.documentId
-              : undefined;
-          })
-          .filter(Boolean)
-      ),
-    ];
-
-    const knowledgeDocuments = await Promise.all(
-      uniqueSources.map((source) => this.getMemoryById(source as UUID))
-    );
-
-    return knowledgeDocuments
-      .filter((memory) => memory !== null)
-      .map((memory) => ({ id: memory.id, content: memory.content }));
+    // Return the fragments directly as this is used from prompts.
+    // Example usage in prompts: # provider KNOWLEDGE
+    return fragments.map((fragment) => ({
+      id: fragment.id,
+      content: fragment.content,
+      similarity: fragment.similarity,
+      metadata: fragment.metadata,
+    }));
   }
 
   async addKnowledge(
     item: KnowledgeItem,
     options = {
-      targetTokens: 3000,
+      targetTokens: 1500,
       overlap: 200,
       modelContextSize: 4096,
     }
