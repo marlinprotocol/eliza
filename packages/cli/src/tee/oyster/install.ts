@@ -2,7 +2,6 @@ import os from 'os';
 import fs from 'fs';
 import https from 'https';
 import path from 'path';
-import { execSync } from 'child_process';
 
 const BASE_URL: string = 'https://artifacts.marlin.org/oyster/binaries/';
 const FILE_NAME: string = 'oyster-cvm';

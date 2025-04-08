@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { fetchCvmList, fetchOysterCvmLogs, installOysterCvmCli } from '@/src/tee/oyster';
+import { DockerOperations as OysterDockerOperations } from '../../tee/oyster/docker';
 import { DockerOperations } from '../../tee/phala/docker';
 import os from 'os';
 
@@ -81,13 +82,41 @@ const buildCommand = new Command()
   .requiredOption('-t, --tag <tag>', 'Tag for the Docker image')
   .action(async (options) => {
     const { image, dockerfile, tag, username } = options;
-    const dockerOps = new DockerOperations(image, username);
+    const dockerOps = new OysterDockerOperations(image, username);
 
     try {
       console.log(`Detected system architecture: ${os.arch()}`);
       await dockerOps.buildImage(dockerfile, tag);
     } catch (error) {
       console.error('Docker image build failed:', error);
+      process.exit(1);
+    }
+  });
+
+/**
+ * Represents a command to publish a Docker image to Docker Hub.
+ *
+ * @param {Object} options - The options for the command.
+ * @param {string} options.image - The Docker image name.
+ * @param {string} options.username - The Docker Hub username.
+ * @param {string} options.tag - The tag of the Docker image to publish.
+ * @returns {Promise<void>} A promise that resolves once the Docker image is published successfully.
+ */
+const publishCommand = new Command()
+  .command('publish')
+  .description('Publish Docker image to Docker Hub')
+  .requiredOption('-i, --image <name>', 'Docker image name')
+  .requiredOption('-u, --username <name>', 'Docker Hub username')
+  .requiredOption('-t, --tag <tag>', 'Tag of the Docker image to publish')
+  .action(async (options) => {
+    const { image, username, tag } = options;
+    const dockerOps = new DockerOperations(image, username);
+
+    try {
+      await dockerOps.pushToDockerHub(tag);
+      console.log(`Docker image ${image}:${tag} published to Docker Hub successfully.`);
+    } catch (error) {
+      console.error('Docker image publish failed:', error);
       process.exit(1);
     }
   });
@@ -102,4 +131,5 @@ export const oysterCommand = new Command('oyster')
   .addCommand(initCommand)
   .addCommand(listCvmCommand)
   .addCommand(fetchCvmLogsCommand)
-  .addCommand(buildCommand);
+  .addCommand(buildCommand)
+  .addCommand(publishCommand);
