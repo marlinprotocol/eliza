@@ -174,45 +174,6 @@ export class DockerOperations {
     }
   }
 
-  async buildImage2(dockerfilePath: string, tag: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (!this.dockerHubUsername) {
-        return reject(new Error('Docker Hub username is required for building'));
-      }
-
-      const arch = this.getSystemArchitecture();
-      const fullImageName = `${this.dockerHubUsername}/${this.imageName}:${tag}`;
-      console.log(`Building Docker image ${fullImageName}...`);
-
-      const platformArg = arch === 'arm64' ? '--platform linux/amd64 ' : '';
-      const cmd = `sudo docker build ${platformArg}-t ${fullImageName} -f ${dockerfilePath} .`;
-
-      console.log(`Running command: ${cmd}`);
-      const child = exec(cmd, { maxBuffer: 1024 * 1024 * 10 }); // Increase buffer limit if needed
-
-      child.stdout?.on('data', (data) => {
-        process.stdout.write(data);
-      });
-
-      child.stderr?.on('data', (data) => {
-        process.stderr.write(data);
-      });
-
-      child.on('close', (code) => {
-        if (code === 0) {
-          console.log(`Docker image ${fullImageName} built successfully.`);
-          resolve();
-        } else {
-          reject(new Error(`Docker build failed with exit code ${code}`));
-        }
-      });
-
-      child.on('error', (err) => {
-        reject(err);
-      });
-    });
-  }
-
   /**
    * Asynchronously pushes the Docker image with the specified tag to Docker Hub.
    *
