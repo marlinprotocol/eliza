@@ -122,6 +122,35 @@ const publishCommand = new Command()
   });
 
 /**
+ * Command to list tags of a Docker image on Docker Hub.
+ *
+ * @param options - Command line options including image name and Docker Hub username.
+ * @returns {Promise<void>} - Promise that resolves after listing the tags.
+ */
+const listTagsCommand = new Command()
+  .command('list-tags')
+  .description('List tags of a Docker image on Docker Hub')
+  .requiredOption('-i, --image <name>', 'Docker image name')
+  .requiredOption('-u, --username <name>', 'Docker Hub username')
+  .action(async (options) => {
+    const { image, username } = options;
+    const dockerOps = new DockerOperations(image, username);
+
+    try {
+      const tags = await dockerOps.listPublishedTags();
+      if (tags.length > 0) {
+        console.log(`Tags for ${username}/${image}:`);
+        tags.forEach((tag) => console.log(`- ${tag}`));
+      } else {
+        console.log(`No tags found for ${username}/${image}`);
+      }
+    } catch (error) {
+      console.error('Failed to list tags:', error);
+      process.exit(1);
+    }
+  });
+
+/**
  * A command for managing Oyster TEE deployments.
  *
  * @type {Command}
@@ -132,4 +161,5 @@ export const oysterCommand = new Command('oyster')
   .addCommand(listCvmCommand)
   .addCommand(fetchCvmLogsCommand)
   .addCommand(buildCommand)
-  .addCommand(publishCommand);
+  .addCommand(publishCommand)
+  .addCommand(listTagsCommand);
